@@ -3,3 +3,4 @@
 .vscode/settings.json
 .alpackages/*.app
 *.app
+.vsode/.alcache/*
