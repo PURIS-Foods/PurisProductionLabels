@@ -4,3 +4,4 @@
 .alpackages/*.app
 *.app
 .vscode/.alcache/*
+bc_documentation.pdf
