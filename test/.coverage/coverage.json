@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "coverageData": [],
+  "testStatus": {
+    "50212|AllLinesValid_ReturnsZero": 0,
+    "50212|MissingWorkCenter_ThrowsError": 0,
+    "50212|MissingOperationNo_ThrowsError": 0,
+    "50212|NoRoutingLines_ExposesFinSetBug": 0,
+    "50213|PrintAction_MissingRoutingNo_ShowsMessage": 0,
+    "50213|PrintAction_MissingWorkCenter_ShowsMessage": 0,
+    "50213|PrintAction_RoutingCountLessThanLineCount_ShowsMessage": 0,
+    "50213|PrintAction_AllDataValid_RunsReport": 0,
+    "50211|isProteins_WhenCompanyNotProteins_ReturnsFalse": 0,
+    "50211|isGrains_WhenCompanyNotGrains_ReturnsFalse": 0,
+    "50211|isAllowed_WhenCompanyNotPurisGrains_ReturnsFalse": 0,
+    "50211|isProteins_CaseInsensitive_ReturnsFalse": 0,
+    "50212|NoRoutingLines_ReturnsZero": 0
+  }
+}

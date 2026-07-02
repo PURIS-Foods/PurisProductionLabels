@@ -8,7 +8,7 @@ Rule language: **MUST** / **MUST NOT** = non-negotiable. **SHOULD** / **SHOULD N
 
 ## 1. Project Identity
 
-This repository is `PurisProductionLabels` — the per-tenant extension (PTE) for **Microsoft Dynamics 365 Business Central** that provides the ability to print custom production labels from released production orders at the Dawson facility for Puris Proteins, owned by Puris. It hosts the AL source at the root directory and will host any test runner skeleton under `Test/`.
+This repository is `PurisProductionLabels` — the per-tenant extension (PTE) for **Microsoft Dynamics 365 Business Central** that provides the ability to print custom production labels from released production orders at the Dawson facility for Puris Proteins, owned by Puris. AL source lives under `app/`. Test code lives under `test/` as a separate AL project.
 
 | Field        | Value                                            |
 | ------------ | ------------------------------------------------ |
@@ -21,7 +21,7 @@ This repository is `PurisProductionLabels` — the per-tenant extension (PTE) fo
 | Features     | `NoImplicitWith`                                 |
 | Dependencies | Barcode Generator (Insight Works)                |
 
-Manifest source of truth: `app.json`. Feature/API documentation: `README.md`. Read both at session start.
+Manifest source of truth: `app/app.json`. Feature/API documentation: `app/readme.md`. Read both at session start.
 
 ---
 
@@ -112,8 +112,7 @@ For Tier 2/3, include author + date:
 
 - **Puris prefix**: All NEW objects MUST use the `Puris` prefix (tables, table extensions, pages, page extensions, codeunits, APIs, reports, report extensions, permission sets, enums, queries, XMLports). No suffix mandate — `Ext` is encouraged for extensions but not required.
 - **One object per file**: Each `.al` file contains exactly one AL object. The file name MUST match the object name.
-- **Folder layout**: All AL source lives at the root.
-  Test code will under `Test/` (`Codeunits/` for test runners and per-feature codeunits).
+- **Folder layout**: All AL source lives under `app/`. Test code lives under `test/Codeunits/` as a separate AL project.
   PageExtensions MUST live in domain subfolders (`SalesOrders/`, `Customers/`, `ProductionOrders/`, etc.).
 - **Object IDs**: MUST follow the bucketed numbering scheme in §4.
 - **Object identifier length**: AL platform limit is **30 characters**. The `Puris` prefix consumes 5 chars, leaving 25 for the rest. Plan abbreviations (`Production` → `Prod`, `AccountManagers` → `AcctMgrs`, drop "On" prepositions) before exceeding the limit. The compiler errors with `AL0305` if violated.
@@ -258,7 +257,7 @@ If API pages are introduced, follow these conventions:
 
 ## 8. Active Analyzers
 
-> **Note:** The AL project root is the repo root (where `app.json` lives). The `.vscode/settings.json` file sits at `.vscode/settings.json` and is gitignored (developer-local). A `.vscode/ruleset.json` SHOULD be committed to govern analyzer rule overrides — it does not yet exist in this repo; create it when first adding a rule suppression.
+> **Note:** The AL project root is `app/` (where `app/app.json` lives). The `.vscode/settings.json` file sits at `app/.vscode/settings.json` and is gitignored (developer-local). A `.vscode/ruleset.json` SHOULD be committed to govern analyzer rule overrides — it does not yet exist in this repo; create it under `app/.vscode/` when first adding a rule suppression.
 
 Add or update `.vscode/settings.json` with the content below to enable analyzers:
 
@@ -299,24 +298,57 @@ Reference: `learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/dev
 
 ## 9. Testing
 
-Test code lives at `Test/` in this repo (not yet created; add `Test/Codeunits/` when the first test codeunit is authored).
+Test code lives at `test/` in this repo as a separate AL project. See `test/README.md` for setup instructions, how to run tests, and full coverage documentation.
+
+### The cardinal rule
+
+**Before making any code change, write a failing test for it first.** Only then make the change. A passing test suite with no new test is not an acceptable outcome for a non-trivial change.
 
 ### Gate behavior
 
 **Before any non-trivial change to a feature that has NO existing tests**, Claude MUST:
 
-1. Propose authoring tests for that feature in `Test/Codeunits/` first.
+1. Propose authoring tests for that feature in `test/Codeunits/` first.
 2. Ask the user whether to proceed without them.
 
 "Non-trivial" excludes: typo fixes, caption tweaks, single-line tooltip changes, `readme.md`-only edits, `.vscode/` settings adjustments.
 
+### Test project identity
+
+| Field | Value |
+|-------|-------|
+| App name | PurisProductionLabelsTests |
+| Publisher | Puris |
+| App ID | `b3f2a1c4-7e8d-4f9a-bc12-3d4e5f6a7b8c` |
+| ID range | 50211–50260 |
+| Depends on | PurisProductionLabels, Barcode Generator |
+
 ### Test codeunit conventions
 
-- Place in `Test/Codeunits/Puris<Feature>Tests.al`.
+- Place in `test/Codeunits/Puris<Feature>Tests.al`.
 - Use namespace `Puris.Tests`.
+- Add `using` directives for any BC namespace whose objects are referenced (e.g. `using Microsoft.Manufacturing.Document;`, `using Microsoft.Manufacturing.Routing;`). Without these, objects in named BC namespaces will not resolve from within `Puris.Tests`.
 - `Subtype = Test`, max 100 test methods per codeunit, target <2 minutes runtime per codeunit.
-- Use `AssertError` for negative tests.
+- Follow arrange → act → assert pattern in every test method.
+- Use `AssertError` for negative tests (expected `Error()` calls).
+- Write `[MessageHandler]`, `[ConfirmHandler]`, and `[ReportHandler]` procedures instead of leaving UI calls unhandled — unhandled dialogs hang the test runner.
 - Avoid hardcoded values — use `Any` library from `microsoft/BCApps` for random data when feasible.
+
+### Test data policy
+
+- **NEVER touch existing sandbox data.** All test data MUST use reserved test order numbers (`TEST-0001` for routing validation tests, `TEST-PA-001` for page action tests) that will never collide with real production orders.
+- Each test codeunit calls `Initialize()` at the start of every test method. `Initialize()` deletes all records with the test order number before inserting fresh data — this is the cleanup mechanism.
+- Insert test records directly (without triggers) using `Record.Init()` + field assignment + `Record.Insert()`. Do not use `Insert(true)` unless trigger execution is specifically required by the test.
+- Codeunit 50102 (`PurisProdOrderActionTests`) MUST be run from a company whose name contains 'proteins' (e.g. `PURIS Proteins`). The page action is hidden in all other companies. Codeunits 50100 and 50101 can run from any company.
+
+### Object ID inventory — test project
+
+| ID | Type | Object Name |
+|----|------|-------------|
+| 50211 | Codeunit | PurisCompanyScopeCheckTests |
+| 50212 | Codeunit | PurisProductionDataChecksTests |
+| 50213 | Codeunit | PurisProdOrderActionTests |
+| 50214–50260 | — | Reserved for future test codeunits |
 
 ---
 
@@ -337,16 +369,16 @@ none
 
 ## 11. Workflow Rules for Claude
 
-- **Session start**: Always read `app.json` and `readme.md` when working on this repo. Re-read CLAUDE.md if the user references conventions.
+- **Session start**: Always read `app/app.json` and `app/readme.md` when working on this repo. Re-read CLAUDE.md if the user references conventions. Read `test/README.md` when working on tests.
 - **Verify before recommending**: Never quote AL syntax, object property semantics, or platform behavior from training memory alone for non-trivial topics. WebFetch the relevant Microsoft Learn page first (§2).
 - **Edit over Write**: For existing `.al` files, prefer the `Edit` tool. Only use `Write` for genuinely new files.
 - **Ask before**:
   - Deleting or renaming any object or field (upgrade-breaking).
   - Bumping `app.json` version.
   - Modifying `.vscode/settings.json` or `.vscode/ruleset.json`.
-  - Modifying `idRanges` in `app.json` (currently 50200–50210).
+  - Modifying `idRanges` in `app/app.json` (currently 50200–50210) or `test/app.json` (currently 50211–50260).
   - Creating any new test codeunit (per §9 gate).
   - Touching legacy items listed in §10.
 - **Do not run the AL compiler**: Claude does not invoke `AL: Package` or build the `.app` file. After AL changes, suggest the user run `Ctrl+Shift+B` in VS Code (or `AL: Package` from the command palette) to verify symbols resolve.
-- **Do not modify `.snapshots/`, `.alpackages/`, or the compiled `.app` file**: those are build artifacts.
+- **Do not modify `.snapshots/`, `.alpackages/`, or the compiled `.app` file**: those are build artifacts. These live at the repo root and must not be moved into `app/`.
 - **`rad.json` and `snapshots.json`**: per Microsoft, these MUST NOT be edited manually.

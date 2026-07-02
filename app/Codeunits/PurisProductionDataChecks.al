@@ -8,10 +8,11 @@ codeunit 50202 PurisProductionDataChecks
     begin
         routingData.SetRange("Prod. Order No.", productionOrderNumber);
         errorCount := 0;
-        repeat
-            if (routingData."Work Center No." = '') or (routingData."Operation No." = '') then
-                errorCount += 1;
-        until routingData.Next() = 0;
+        if routingData.FindSet() then
+            repeat
+                if (routingData."Work Center No." = '') or (routingData."Operation No." = '') then
+                    errorCount += 1;
+            until routingData.Next() = 0;
 
         if errorCount > 0 then begin
             Error('Operation No and Work Center No are missing from %1 lines. Check Routing Information on Line -> Routing');
