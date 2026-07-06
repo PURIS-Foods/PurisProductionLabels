@@ -5,3 +5,4 @@
 *.app
 .vscode/.alcache/*
 bc_documentation.pdf
+CLAUDE.md
